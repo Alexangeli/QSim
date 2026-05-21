@@ -33,7 +33,7 @@ int main(int argc, char *argv[]) {
 
     printf("State:   %s\n", state_file);
     printf("Circuit: %s\n", circuit_file);
-    printf("Threads: %d\n", num_threads);
+    printf("Threads: %d\n", n_threads);
 
     return 0;
 
