@@ -7,7 +7,7 @@ matrix_t *matrix_alloc(int size) {
     m->size = size;
     m->data = malloc(size * sizeof(complex_t *));
     for (int i = 0; i < size; i++) {
-        m->data[i] = calloc(size * sizeof(complex_t));
+        m->data[i] = malloc(size * sizeof(complex_t));
     }
     return m;
 }
@@ -37,7 +37,7 @@ matrix_t *matrix_multiply(matrix_t *a, matrix_t *b) {
 
 /* Multiply a matrix by a vector */
 complex_t *matrix_vec_mul(matrix_t *m, complex_t *v) {
-    complex_t *res = calloc(m->size * sizeof(complex_t));
+    complex_t *res = malloc(m->size * sizeof(complex_t));
     for (int i = 0; i < m->size; i++) {
         for (int j = 0; j < m->size; j++) {
             res[i] = complex_add(res[i], complex_mul(m->data[i][j], v[j]));
