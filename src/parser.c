@@ -33,7 +33,8 @@ char *read_file(const char *filename) {
  * Output: pointer to first non-whitespace char 
  */
 static const char *skip_whitespace(const char *p) {
-    while (*p == ' ' || *p == '\t' || *p == '\n' || *p == '\r' || *p == ',')
+    while (*p == ' '  || *p == '\t' || *p == '\n' || 
+           *p == '\r' || *p == ','  || *p == '('  || *p == ')')
         p++;
     return p;
 }
@@ -67,26 +68,6 @@ static const char *parse_complex(const char *p, complex_t *out) {
     int chars = 0;
 
     p = skip_whitespace(p);
-
-
-    /* ----- format (a, b) ----- */
-    if (*p == '(') {
-        p++; // skip
-        p = skip_whitespace(p);
-
-        /* read real part*/
-        sscanf(p, "%lf%n", &out->real, &chars);
-        p += chars;
-        p = skip_whitespace(p);
-
-        /* read imaginary part*/
-        sscanf(p, "%lf%n", &out->imag, &chars);
-        p += chars;
-        p = skip_whitespace(p);
-
-        if (*p == ')') p++; /* skip ')' */
-        return p;
-    }
 
     /* ----- pure imaginary -i or -iN ----- */
     if (*p == '-' && *(p+1) == 'i') {
@@ -152,7 +133,7 @@ static const char *parse_complex(const char *p, complex_t *out) {
  * Output: pointer to init_state_t, NULL on error
  */
 
-init_state_t *parse_init(const char *filename) {
+init_state_t *parse_init_state(const char *filename) {
     char *buf = read_file(filename);
     if (!buf) return NULL;
 
@@ -174,7 +155,7 @@ init_state_t *parse_init(const char *filename) {
             sscanf(p, "%d%n", &s->n, &chars);
             p += chars;
 
-        } else if (strncmp(p, "init", 5) == 0) {
+        } else if (strncmp(p, "#init", 5) == 0) {
             p += 5;
             p = skip_whitespace(p);
             
@@ -247,7 +228,7 @@ circuit_t *parse_circuit(const char *filename, int n) {
             for (int i = 0; i < size; i++){
                 for (int j = 0; j < size; j++){
                     p = skip_whitespace(p);
-                    p = parse_complex(p, &mat->data[i][j]);
+                    p = parse_complex(p, &mat->data[i][j]);;
                 }
             }
             p = skip_whitespace(p);
@@ -312,7 +293,7 @@ circuit_t *parse_circuit(const char *filename, int n) {
 /*
  * Frees the memory of the initial state.
  */
-void init_state_free(init_state_t *s) {
+void free_init_state(init_state_t *s) {
     if (!s) return;
     free(s->state);
     free(s);
@@ -322,7 +303,7 @@ void init_state_free(init_state_t *s) {
  * Frees the memory of the circuit.
  */
 
-void circuit_free(circuit_t *c) {
+void free_circuit(circuit_t *c) {
     if (!c) return;
     for (int i = 0; i < c->num_gates; i++) {
         free(c->gates[i]->name);
