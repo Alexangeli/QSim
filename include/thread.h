@@ -43,7 +43,7 @@ matrix_t *compute_unitary(circuit_t *c, int num_threads);
  *         n     - number of qubits 
  * Output: pointer to the final state vector 
  */
-complex_t *apply_unitary(matrix_t *m, complex_t *state, int n);
+complex_t *apply_unitary(matrix_t *m, complex_t *state);
 
 
 # endif
