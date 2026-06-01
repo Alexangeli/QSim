@@ -2,7 +2,19 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include "parser.h"
+#include "thread.h"
 
+
+/*
+ * Prints an integer index as a binary string of n bits.
+ *
+ * Input:  j - index to print 
+ *         n - number of bits 
+ */
+static void print_binary(int j, int n) {
+    for (int bit = n - 1; bit >= 0; bit--)
+        printf("%d", (j >> bit) & 1);
+}
 
 int main(int argc, char *argv[]) {
 
@@ -30,41 +42,55 @@ int main(int argc, char *argv[]) {
 
     /* parse initial state  */
     init_state_t *s = parse_init_state(state_file);
-    if (!s) { fprintf(stderr, "Errore parsing stato iniziale\n"); exit(EXIT_FAILURE); }
+    if (!s) {
+        fprintf(stderr, "Error parsing initial state file: %s\n", state_file);
+        exit(EXIT_FAILURE);
+    }
+
 
     /* parse circuit */
     circuit_t *c = parse_circuit(circuit_file, s->n);
-    if (!c) { fprintf(stderr, "Errore parsing circuito\n"); exit(EXIT_FAILURE); }
+    if (!c) {
+        fprintf(stderr, "Error parsing circuit file: %s\n", circuit_file);
+        free_init_state(s);
+        exit(EXIT_FAILURE);
+    }
+
+    int owned = 0;
+    /* compute final unitary matrix */
+    matrix_t *unitary = compute_unitary(c, n_threads, &owned);
 
 
-    printf("qubits: %d\n", s->n);
-    printf("state vector (%d elements):\n", 1 << s->n);
-    /*for (int i = 0; i < (1 << s->n); i++)
-        printf("  [%d] %f + i%f\n", i, s->state[i].real, s->state[i].imag);*/
+    /* apply unitary to initial state */
+    complex_t *v_fin = apply_unitary(unitary, s->state);
 
-    printf("\ngates defined: %d\n", c->num_gates);
-    for (int i = 0; i < c->num_gates; i++) {
-        printf("  gate[%d]: %s, size %dx%d\n", i,
-               c->gates[i]->name,
-               c->gates[i]->matrix->size,
-               c->gates[i]->matrix->size);
+    int size = 1 << s->n;
 
-    /*for (int r = 0; r < sz; r++)
-        for (int cl = 0; cl < sz; cl++)
-            printf("    [%d][%d] = %f + i%f\n", r, cl,
-                   c->gates[i]->matrix->data[r][cl].real,
-                   c->gates[i]->matrix->data[r][cl].imag);*/
-}
+    if (c->measure == 0) {
+        /* no measurement: print final state */
+        printf("[ ");
+        for (int i = 0; i < size; i++) {
+            printf("%.5f+i%.5f", v_fin[i].real, v_fin[i].imag);
+            if (i < size - 1) printf(",  ");
+        }
+        printf(" ]\n");
+    } else {
+        /* measurement: sample N times and print distribution */
 
-    printf("circuit length: %d\n", c->circ_len);
-    for (int i = 0; i < c->circ_len; i++)
-        printf("  step[%d]: %s\n", i, c->gates[c->circ[i]]->name);
+        int *counts = measure(v_fin, s->n, c->measure, n_threads);
 
-    printf("\nmeasure: %d\n", c->measure);
+        for (int i = 0; i < size; i++) {
+            print_binary(i, s->n);
+            printf(" @ %.5f\n", (double)counts[i] / c->measure);
+        }
+        free(counts);
+    }
+    
 
+    free(v_fin);
+    if (owned) matrix_free(unitary);
     free_init_state(s);
     free_circuit(c);
-
     return 0;
 
 }
