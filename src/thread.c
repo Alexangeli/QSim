@@ -93,7 +93,7 @@ matrix_t *compute_unitary(circuit_t *c, int n_threads, int *owned) {
         /* carry over odd matrix */
         if (count % 2 == 1) {
             new_matrices[new_count - 1] = matrices[count - 1];
-            new_owned[new_count - 1]    = owned[count - 1];
+            new_owned[new_count - 1]    = owned_arr[count - 1];
         }
 
         /*free intermediate matrices we own */

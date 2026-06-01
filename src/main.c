@@ -87,10 +87,10 @@ int main(int argc, char *argv[]) {
     }
     
 
-    free(v_fin);
-    if (owned) matrix_free(unitary);
-    free_init_state(s);
-    free_circuit(c);
+free(v_fin);
+if (owned) matrix_free(unitary);
+free_init_state(s);
+free_circuit(c);
     return 0;
 
 }

@@ -306,9 +306,9 @@ void free_init_state(init_state_t *s) {
 void free_circuit(circuit_t *c) {
     if (!c) return;
     for (int i = 0; i < c->num_gates; i++) {
-        free(c->gates[i]->name);
-        matrix_free(c->gates[i]->matrix);
-        free(c->gates[i]);
+    free(c->gates[i]->name);
+    matrix_free(c->gates[i]->matrix);
+    free(c->gates[i]);
     }
     free(c->gates);
     free(c->circ);

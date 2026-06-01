@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include "matrix.h"
 
 /* Allocate memory for a matrix of given size */
@@ -14,6 +15,7 @@ matrix_t *matrix_alloc(int size) {
 
 /* Free the memory allocated for a matrix */
 void matrix_free(matrix_t *m) {
+    if (!m) return;
     for (int i = 0; i < m->size; i++) {
         free(m->data[i]);
     }
