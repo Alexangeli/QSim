@@ -12,16 +12,16 @@
  * Output: pointer to the string, NULL on error
  */
 char *read_file(const char *filename) {
-    FILE *f = fopen(filename, "r");
+    FILE *f = fopen(filename, "r"); // open file mode read
     if (!f) {perror("fopen"); return NULL;}
 
-    fseek(f, 0, SEEK_END);
-    long file_size = ftell(f);
-    rewind(f);
+    fseek(f, 0, SEEK_END);  // move the pointer to the end of the file
+    long file_size = ftell(f);  // file size in bytes
+    rewind(f);  // move the pointer back to the beginning of the file
 
-    char *buf = malloc(file_size + 1);
-    fread(buf, 1, file_size, f);
-    buf[file_size] = '\0';
+    char *buf = malloc(file_size + 1);  // allocate buffer for file content + null terminator
+    fread(buf, 1, file_size, f);    // read file into buffer
+    buf[file_size] = '\0';  
     fclose(f);
     return buf;
 }
@@ -65,18 +65,18 @@ static const char *skip_whitespace(const char *p) {
 static const char *parse_complex(const char *p, complex_t *out) {
     out -> real = 0.0;
     out -> imag = 0.0;
-    int chars = 0;
+    int chars = 0;  // number of characters consumed by sscanf
 
-    p = skip_whitespace(p);
+    p = skip_whitespace(p); 
 
     /* ----- pure imaginary -i or -iN ----- */
     if (*p == '-' && *(p+1) == 'i') {
         p += 2; //skip
-        double val = 1.0;
-        chars = 0;
-        sscanf(p, "%lf%n", &val, &chars);
-        p += chars;
-        out -> imag = -val;
+        double val = 1.0;                   //default to 1 in case of bare -i
+        chars = 0;  
+        sscanf(p, "%lf%n", &val, &chars);   // try to read a number after -i, if none is found, val remains 1.0
+        p += chars;                         // advance pointer by number of chars read
+        out -> imag = -val;                 // set imaginary part to -val
         return p;
     }
 
@@ -84,25 +84,25 @@ static const char *parse_complex(const char *p, complex_t *out) {
     if (*p == 'i' || (*p == '+' && *(p+1) == 'i')) {
         if (*p == '+') p++; /* skip '+' */
         p++;        
-        double val = 1.0;
+        double val = 1.0;                   //default to 1 in case of bare -i
         chars = 0;
-        sscanf(p, "%lf%n", &val, &chars);
-        p += chars;
-        out -> imag = val;
+        sscanf(p, "%lf%n", &val, &chars);   // try to read a number after +i, if none is found, val remains 1.0
+        p += chars;                         // advance pointer by number of chars read
+        out -> imag = val;                  // set imaginary part to val
         return p;
     }
 
     /* ------ real part (handles even negatives) ----- */
 
     chars = 0;
-    sscanf(p, "%lf%n", &out->real, &chars);
+    sscanf(p, "%lf%n", &out->real, &chars); // read real part, if present and save number of chars read
     p += chars;
 
     /* ----- optional imaginary part +ib ----- */
     if (*p == '+' && *(p+1) == 'i') {
         p += 2; /* skip '+i' */
         chars = 0;
-        double val = 1.0; /* default to 1 in case of bare +i */
+        double val = 1.0;                   //default to 1 in case of bare +i   
         sscanf(p, "%lf%n", &val, &chars);
         p += chars;
         out->imag = val;
@@ -111,9 +111,9 @@ static const char *parse_complex(const char *p, complex_t *out) {
 
     /* ----- optional imaginary part -ib -----*/
     if (*p == '-' && *(p+1) == 'i') {
-        p += 2; /* skip '-i' / salta '-i' */
+        p += 2;                             /* skip '-i' */
         chars = 0;
-        double val = 1.0; /* default to 1 in case of bare -i */
+        double val = 1.0;                   //default to 1 in case of bare -i       
         sscanf(p, "%lf%n", &val, &chars);
         p += chars;
         out->imag = -val;
@@ -137,15 +137,15 @@ init_state_t *parse_init_state(const char *filename) {
     char *buf = read_file(filename);
     if (!buf) return NULL;
 
-    init_state_t *s = malloc(sizeof(init_state_t));
+    init_state_t *s = malloc(sizeof(init_state_t));     // allocate structure for initial state
     s -> n = 0;
     s -> state = NULL;
 
-    const char *p = buf;
+    const char *p = buf;    // pointer to current position in buffer
 
-    while(*p){
+    while(*p){              // loop until end of buffer
         p = skip_whitespace(p);
-        if (!*p) break;
+        if (!*p) break;     /* check for #qubits or #init directives */
         
         if (strncmp(p, "#qubits", 7) == 0) {
             p += 7;
@@ -197,9 +197,9 @@ circuit_t *parse_circuit(const char *filename, int n) {
     if (!buf) return NULL;
 
     circuit_t *c = malloc(sizeof(circuit_t));
-    c -> gates = NULL;
-    c -> num_gates = 0;
-    c -> circ = NULL;
+    c -> gates = NULL;  
+    c -> num_gates = 0; 
+    c -> circ = NULL; 
     c -> circ_len = 0;
     c -> measure = 0;
 
@@ -210,7 +210,7 @@ circuit_t *parse_circuit(const char *filename, int n) {
         p = skip_whitespace(p);
         if (!*p) break;
 
-        if (strncmp(p, "#define", 7) == 0) {
+        if (strncmp(p, "#define", 7) == 0) {    // parse gate definition
             p += 7;
             p = skip_whitespace(p);
 
@@ -228,18 +228,18 @@ circuit_t *parse_circuit(const char *filename, int n) {
             for (int i = 0; i < size; i++){
                 for (int j = 0; j < size; j++){
                     p = skip_whitespace(p);
-                    p = parse_complex(p, &mat->data[i][j]);;
+                    p = parse_complex(p, &mat->data[i][j]);     // parse one complex number and store it in the matrix
                 }
             }
             p = skip_whitespace(p);
             if (*p == ']') p++; /* skip ']'*/
 
             /* store gate dinamically */
-            c -> gates = realloc(c->gates, (c-> num_gates + 1) * sizeof(gate_t*));
-            c->gates[c->num_gates] = malloc(sizeof(gate_t));
-            c->gates[c->num_gates]->name   = strdup(name);
-            c->gates[c->num_gates]->matrix = mat;
-            c->num_gates++;
+            c -> gates = realloc(c->gates, (c-> num_gates + 1) * sizeof(gate_t*));  // grow array of gate pointers
+            c->gates[c->num_gates] = malloc(sizeof(gate_t));    // allocate new gate structure
+            c->gates[c->num_gates]->name   = strdup(name);      // copy gate name
+            c->gates[c->num_gates]->matrix = mat;               // assign matrix to gate
+            c->num_gates++; 
 
         } else if (strncmp(p, "#circ", 5) == 0) {
             p += 5;
@@ -272,8 +272,9 @@ circuit_t *parse_circuit(const char *filename, int n) {
                     exit(EXIT_FAILURE);
                 }
 
-                /* store index */
+                /* dynamically allocate memory for the circuit */
                 c->circ = realloc(c->circ, (c->circ_len + 1) * sizeof(int));
+                /* store gate index */
                 c->circ[c->circ_len++] = idx;
             } 
         } else {

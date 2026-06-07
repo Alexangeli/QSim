@@ -35,6 +35,7 @@ matrix_t *compute_unitary(circuit_t *c, int n_threads, int *owned) {
     matrix_t **matrices = malloc(k * sizeof(matrix_t *));
     int *owned_arr = calloc(k, sizeof(int)); /* 1 = allocated by us, 0 = from circuit */
 
+    /* populate matrices array with gate matrices */
     for (int i = 0; i < k; i++) {
         matrices[i] = c->gates[c->circ[i]]->matrix;
         owned_arr[i] = 0; /* belongs to circuit */
@@ -47,7 +48,7 @@ matrix_t *compute_unitary(circuit_t *c, int n_threads, int *owned) {
         /* number of pairs to multiply */
         int pairs = count/2;
 
-        /* number of threads to use at this level */
+        /* number of threads to use at this level (as it was min(pairs, n_threads))*/
         int nthreads = pairs < n_threads ? pairs : n_threads;
 
         /*allocate threads and their arguments */
@@ -83,8 +84,9 @@ matrix_t *compute_unitary(circuit_t *c, int n_threads, int *owned) {
 
             /* store results */
             for (int j = 0; j < batch; j++){
+                /*store the result matrix computed by thread j */
                 new_matrices[i + j] = args[i + j].result;
-                new_owned[i+j] = 1; /* allocated by matrix_multiply */
+                new_owned[i+j] = 1; /* allocated by matrix_multiply, so us */
             }
 
             i += batch;
@@ -145,7 +147,7 @@ complex_t *apply_unitary(matrix_t *m, complex_t *state) {
 void *thread_measure(void *arg) {
     measure_arg_t *m = (measure_arg_t *)arg;
 
-    /* compute probability distribution */
+    /* compute probability distribution, calculating |a + ib|^2 = a^2 + b^2 */
     double *probs = malloc(m->size * sizeof(double));
     for (int i = 0; i < m->size; i++) {
         probs[i] = m ->v_fin[i].real * m->v_fin[i].real +
@@ -155,14 +157,14 @@ void *thread_measure(void *arg) {
     /* perform n_shots samples */
 
     for (int s = 0; s < m -> n_shots; s++) {
-        /*generate random number tween 0 and 1 */
+        /*generate random number tween 0 and 1, rand_r is thread-safe */
         double r = (double)rand_r(&m->seed) / RAND_MAX;
 
-        /* find which state r falls into */
+        /* find which state r falls into using cumulative sum */
         double cumulative = 0.0;
-        for (int i = 0; m->n_shots; i++) {
+        for (int i = 0; i < m->size; i++) {
             cumulative += probs[i];
-            if (r <= cumulative) {
+            if (r <= cumulative) {      
                 m -> counts[i]++;
                 break;
             }
@@ -197,7 +199,7 @@ int *measure(complex_t *v_fin, int n, int n_shots, int n_threads) {
 
     /*distribute n_shots among threads */
     int base_shots = n_shots / n_threads;
-    int remainder = n_shots / n_threads;
+    int remainder = n_shots % n_threads;
 
     pthread_t *threads = malloc(n_threads * sizeof(pthread_t));
     measure_arg_t *args = malloc(n_threads * sizeof(measure_arg_t));
